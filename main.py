@@ -6,11 +6,13 @@ one image that sums up the world news of Friday 20 November 2026. This
 program is the entry's deterministic runner. It checks the poster (it is
 present, it is a PNG, it is within the 1 MiB / 1024 px limits) and then
 writes the exact same bytes to ``entry.png`` inside the output directory
-the grader provides, and prints a fixed log of the five stories the poster
-carries. Standard library only; no network, no clock, no randomness, so
+the grader provides (and verifies the copy with a SHA-256 comparison
+before reporting success), and prints a fixed log of the five stories the
+poster carries. Standard library only; no network, no clock, no randomness, so
 two runs produce identical bytes and identical output.
 """
 
+import hashlib
 import os
 import struct
 import sys
@@ -67,6 +69,13 @@ def main():
     os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
     with open(dest, "wb") as handle:
         handle.write(data)
+    # Integrity check: the grader must receive byte-identical poster bytes.
+    with open(dest, "rb") as handle:
+        written = handle.read()
+    if hashlib.sha256(written).hexdigest() != hashlib.sha256(data).hexdigest():
+        print("output copy mismatch: %s differs from %s" % (dest, POSTER_NAME),
+              file=sys.stderr)
+        sys.exit(1)
     print("The World in One Day -- %s" % NEWS_DAY)
     for place, headline in STORIES:
         print("%s: %s" % (place, headline))
